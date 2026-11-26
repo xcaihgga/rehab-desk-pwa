@@ -6,7 +6,7 @@
 
 GitHub 安全策略不允许流水线自动创建 Pages 站点，需要仓库所有者在网页上点一次：
 
-Settings - Pages - Build and deployment - Source 选择 **GitHub Actions**（无需保存，选完即生效）。
+Settings - Pages - Build and deployment - Source 选择 **GitHub Actions**（选完即生效，无需保存）。
 
 开关打开后，本仓库的定时任务（每 10 分钟）会自动完成部署，无需再次操作。
 
