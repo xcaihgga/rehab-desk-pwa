@@ -5,10 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/15 * * * *'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -17,22 +17,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Check Pages status
-        id: pages
-        run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${{ github.token }}" "${{ github.api_url }}/repos/${{ github.repository }}/pages")
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          echo "pages api http=$code"
-          if [ "$code" != "200" ]; then echo "::notice::Pages 尚未启用：请在仓库 Settings - Pages 将 Source 设为 GitHub Actions，之后定时任务会自动重试成功"; fi
-
       - name: Download site package
-        if: steps.pages.outputs.code == '200'
         run: |
           curl -fSL --max-time 120 -o site.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
           ls -l site.zip
@@ -43,17 +31,11 @@ jobs:
           touch _site/.nojekyll
           ls -la _site
 
-      - name: Configure Pages
-        if: steps.pages.outputs.code == '200'
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        if: steps.pages.outputs.code == '200'
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: _site
-
-      - name: Deploy
-        id: deployment
-        if: steps.pages.outputs.code == '200'
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          commit_message: 'deploy: 康复病历工作台 PWA'
+          force_orphan: true

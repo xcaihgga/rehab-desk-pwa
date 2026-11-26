@@ -1,10 +1,6 @@
 name: Probe CDN
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - probe-status.txt
   workflow_dispatch:
 
 permissions:
@@ -22,7 +18,6 @@ jobs:
           {
             echo "http_code=$code"
             echo "bytes=$size"
-            echo "sha256=$(sha256sum s.zip 2>/dev/null | cut -d' ' -f1)"
             echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > probe-status.txt
       - name: Commit status
