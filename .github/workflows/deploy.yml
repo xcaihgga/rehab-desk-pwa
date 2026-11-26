@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
 
 permissions:
   contents: read
@@ -21,22 +23,42 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download site package
+      - name: Probe site package
+        continue-on-error: true
         run: |
-          curl -fSL -o site.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
-          mkdir -p _site
+          curl -fSL --max-time 60 -w 'http=%{http_code} size=%{size_download}\n' -o site.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
+          ls -l site.zip || true
+
+      - name: Check Pages status
+        id: pages
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${{ github.token }}" "${{ github.api_url }}/repos/${{ github.repository }}/pages")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "pages api http=$code"
+          if [ "$code" != "200" ]; then echo "::notice::Pages 尚未启用：请在仓库 Settings - Pages 将 Source 设为 GitHub Actions，之后本次流程会自动重试成功"; fi
+
+      - name: Prepare site
+        if: steps.pages.outputs.code == '200'
+        run: |
+          rm -rf _site _tmp
+          mkdir -p _site _tmp
+          curl -fSL --max-time 120 -o site.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
           unzip -q site.zip -d _tmp
           cp -r _tmp/gh/. _site/
           touch _site/.nojekyll
           ls -la _site
+
       - name: Configure Pages
+        if: steps.pages.outputs.code == '200'
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
+
       - name: Upload artifact
+        if: steps.pages.outputs.code == '200'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
       - name: Deploy
         id: deployment
+        if: steps.pages.outputs.code == '200'
         uses: actions/deploy-pages@v4
