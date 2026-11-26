@@ -1,0 +1,16 @@
+name: Probe CDN
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch package
+        run: |
+          curl -fSL --max-time 90 -w 'http=%{http_code} size=%{size_download}\n' -o s.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
+          ls -l s.zip
+          unzip -l s.zip | tail -3
