@@ -3,14 +3,32 @@ name: Probe CDN
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - probe-status.txt
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Fetch package
         run: |
-          curl -fSL --max-time 90 -w 'http=%{http_code} size=%{size_download}\n' -o s.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
-          ls -l s.zip
-          unzip -l s.zip | tail -3
+          code=$(curl -sL --max-time 90 -w '%{http_code}' -o s.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt" || true)
+          size=$(stat -c%s s.zip 2>/dev/null || echo 0)
+          {
+            echo "http_code=$code"
+            echo "bytes=$size"
+            echo "sha256=$(sha256sum s.zip 2>/dev/null | cut -d' ' -f1)"
+            echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > probe-status.txt
+      - name: Commit status
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add probe-status.txt
+          git commit -m "chore: probe status [skip ci]" || true
+          git push || true
