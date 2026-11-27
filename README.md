@@ -2,13 +2,12 @@
 
 本仓库只存放部署流水线，站点内容由 `site.zip` 自动解包发布，请勿直接改站内文件。
 
-## 首次上线需要一次开关
+## Pages 两种发布方式都已支持
 
-GitHub 安全策略不允许流水线自动创建 Pages 站点，需要仓库所有者在网页上点一次：
+- 若 Pages 的 Source 选的是 **GitHub Actions**，流水线里的 `deploy-pages` 会直接发布。
+- 若 Source 选的是 **Deploy from a branch -> gh-pages**，分支推送后 GitHub 会自己构建发布。
 
-Settings - Pages - Build and deployment - Source 选择 **GitHub Actions**（选完即生效，无需保存）。
-
-开关打开后，本仓库的定时任务（每 10 分钟）会自动完成部署，无需再次操作。
+两种任选一种即可，不需要改代码。
 
 ## 说明
 
