@@ -56,26 +56,3 @@ jobs:
         id: deployment
         continue-on-error: true
         uses: actions/deploy-pages@v4
-
-  diagnose:
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Collect Pages state
-        run: |
-          code=$(curl -sS -o /tmp/pages.json -w '%{http_code}' -H "Authorization: Bearer ${{ github.token }}" -H "Accept: application/vnd.github+json" "${{ github.api_url }}/repos/${{ github.repository }}/pages" || true)
-          {
-            echo "http_status=$code"
-            echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "body:"
-            head -c 800 /tmp/pages.json 2>/dev/null || true
-          } > pages-info.txt
-          cat pages-info.txt
-      - name: Commit diagnosis
-        run: |
-          git config user.name "diag-bot"
-          git config user.email "xcaihgga@users.noreply.github.com"
-          git add pages-info.txt
-          git commit -m "chore: pages diagnosis [skip ci]" || true
-          git push || true
