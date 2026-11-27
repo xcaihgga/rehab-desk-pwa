@@ -1,11 +1,14 @@
 name: Deploy PWA to Pages
 
+# 只有两种情况部署：改 deploy-source.txt（换包）或手动触发。
+# 去掉了原来的 */15 定时任务——那是「链接过期后仍每 15 分钟强推一次」的根源。
 on:
   push:
     branches: [main]
+    paths:
+      - 'deploy-source.txt'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
-  schedule:
-    - cron: '*/15 * * * *'
 
 permissions:
   contents: write
@@ -20,16 +23,45 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve package URL
+        id: src
+        run: |
+          set -euo pipefail
+          url="$(tr -d '\r\n' < deploy-source.txt)"
+          case "$url" in
+            https://*) echo "url=$url" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::deploy-source.txt 里不是合法的 https 地址"; exit 1 ;;
+          esac
+
       - name: Download site package
         run: |
-          set -eux
-          curl -fSL --max-time 120 -o site.zip "https://aka.doubaocdn.com/s/C0VfrBPWmt"
+          set -euo pipefail
+          curl -fSL --retry 2 --max-time 180 -o site.zip "${{ steps.src.outputs.url }}"
           ls -l site.zip
-          rm -rf _site _tmp
-          mkdir -p _site _tmp
+          rm -rf _site _tmp && mkdir -p _site _tmp
           unzip -q site.zip -d _tmp
-          cp -r _tmp/gh/. _site/
-          ls -la _site
+          if [ -d _tmp/gh ]; then cp -r _tmp/gh/. _site/; else cp -r _tmp/. _site/; fi
+
+      - name: Verify package integrity
+        run: |
+          set -euo pipefail
+          for f in index.html app.js data.js styles.css sw.js manifest.json templates-bingli.js schemas-bingli.js hints-bingli.js; do
+            [ -s "_site/$f" ] || { echo "::error::缺少或文件为空: $f"; exit 1; }
+          done
+          [ "$(wc -c < _site/app.js)" -gt 200000 ] || { echo "::error::app.js 体积异常，疑似包损坏"; exit 1; }
+          [ "$(wc -c < _site/data.js)" -gt 500000 ] || { echo "::error::data.js 体积异常，疑似包损坏"; exit 1; }
+          [ "$(wc -c < _site/index.html)" -gt 100000 ] || { echo "::error::index.html 体积异常，疑似包损坏"; exit 1; }
+          [ -f _site/.nojekyll ] || touch _site/.nojekyll
+          echo "integrity ok: $(ls -A _site | wc -l) files"
+
+      - name: Stamp service worker version
+        run: |
+          set -euo pipefail
+          NEW="deploy-${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}"
+          sed -i "s/^const VERSION = '.*';/const VERSION = '${NEW}';/" _site/sw.js
+          grep -n "^const VERSION = 'deploy-" _site/sw.js
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
