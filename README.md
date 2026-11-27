@@ -1,16 +1,24 @@
 # 康复病历工作台 · PWA 站点
 
-本仓库只存放部署流水线，站点内容由 `site.zip` 自动解包发布，请勿直接改站内文件。
+访问地址：https://xcaihgga.github.io/rehab-desk-pwa/
 
-## Pages 两种发布方式都已支持
+本仓库只放“怎么发布”的说明，站点文件本身在 `gh-pages` 分支。服务器上没有任何病人数据，病例只存在访问者本机浏览器里。
 
-- 若 Pages 的 Source 选的是 **GitHub Actions**，流水线里的 `deploy-pages` 会直接发布。
-- 若 Source 选的是 **Deploy from a branch -> gh-pages**，分支推送后 GitHub 会自己构建发布。
+## 平时怎么更新站点
 
-两种任选一种即可，不需要改代码。
+1. 拿到新的站点包地址（形如 `https://aka.doubaocdn.com/s/xxxx`，有效期约 7 天，够一次发版用）
+2. 打开 `deploy-source.txt`，把里面那一行换成新地址
+3. 保存提交，1–2 分钟自动生效
 
-## 说明
+不需要改 workflow，也不需要等定时任务。
 
-- 访问地址：https://xcaihgga.github.io/rehab-desk-pwa/
-- 数据只保存在访问者本机浏览器 localStorage，服务器不保存任何病例数据。
-- 站点包更新：替换 `site.zip` 地址后重新提交即可。
+## 部署时会自动做的事情
+
+- 校验包完整性：9 个站点文件必须存在，且 `app.js` / `data.js` / `index.html` 体积在合理区间，不合格的包不会推上去（防止把站点刷成残缺页）
+- 给 `sw.js` 的版本号盖上 `deploy-<构建号>-<提交号>`，保证每台已安装设备都会换到新版（不盖就会一直用旧缓存）
+- 推送到 `gh-pages` 分支；Pages 若设为 GitHub Actions 模式，`deploy-pages` 也会同时发布
+
+## 注意
+
+- 不要把任何真实病历导出文件放进这个仓库或站点包
+- 之前每 15 分钟的定时重部署已移除：它会在包地址过期后反复失败，还可能把站点刷回旧版本
