@@ -1,0 +1,8 @@
+http_status=404
+time=2026-11-27T05:46:18Z
+body:
+{
+  "message": "Not Found",
+  "documentation_url": "https://docs.github.com/rest/pages/pages#get-a-apiname-pages-site",
+  "status": "404"
+}
